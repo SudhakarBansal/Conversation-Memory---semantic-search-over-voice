@@ -1,0 +1,15 @@
+# Conversation Memory — Python backend dependencies
+#
+# NOTE: install CPU-only torch FIRST (no NVIDIA GPU needed, ~190MB vs several GB):
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+# then:
+#   pip install -r requirements.txt
+
+sentence-transformers   # local embedding model (all-MiniLM-L6-v2)
+psycopg[binary]         # Nyas Postgres client
+boto3                   # Nyas S3-compatible storage
+soundfile               # FLAC inspection
+python-dotenv           # load .env
+fastapi                 # API
+uvicorn[standard]       # ASGI server
+numpy                   # cosine similarity

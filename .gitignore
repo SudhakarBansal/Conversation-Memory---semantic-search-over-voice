@@ -1,0 +1,35 @@
+# Secrets — NEVER commit
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+*.log
+
+# Data (audio clips can be large; keep out of git)
+data/
+*.mp4
+*.wav
+*.mp3
+
+# Tooling / test artifacts
+.playwright-mcp/
+
+# Internal planning doc — competition strategy/notes, not for the public repo.
+# (Delete this line if you want to include it.)
+PROJECT_BRIEF.md
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
