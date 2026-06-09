@@ -8,6 +8,14 @@ No LLM in the loop. Just speech-to-text, embeddings, and cosine similarity — a
 
 ---
 
+## Demo
+
+[![Watch the demo](demo.png)](demo.mp4)
+
+▶ **[Watch the demo](demo.mp4)** — paste a link, search by meaning, and jump to the exact moment. *(Click the screenshot above.)*
+
+---
+
 ## What it does
 
 1. **Add a source** — upload an audio file, or paste a YouTube / media URL (the backend pulls the audio with `yt-dlp`).
@@ -92,5 +100,9 @@ Open **http://localhost:3000**, upload an audio file, wait for it to transcribe,
 - Nyas storage doesn't serve HTTP range requests, so audio is streamed back through a small range-capable endpoint (`GET /api/sources/{id}/audio`) — that's what makes seeking to a timestamp work.
 
 ## How search works under the hood
+
+![Cosine similarity — meaning is direction](cosine_similarity.png)
+
+Every sentence becomes a vector. Sentences with similar meaning point in similar **directions**, so the angle between them is small and their **cosine similarity** is close to 1; unrelated sentences sit at a wide angle, near 0.
 
 Embeddings are unit-normalized, so **cosine similarity is just a dot product**. Searching a source is one `matrix @ query` over all its chunk vectors — fast, transparent, and no vector database required. The whole ranking lives in [`app/search.py`](app/search.py).

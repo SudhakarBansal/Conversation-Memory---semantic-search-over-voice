@@ -18,9 +18,11 @@ out/
 
 # Data (audio clips can be large; keep out of git)
 data/
+# except the README demo video
 *.mp4
 *.wav
 *.mp3
+!demo.mp4
 
 # Tooling / test artifacts
 .playwright-mcp/
