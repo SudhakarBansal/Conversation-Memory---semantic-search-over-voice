@@ -26,7 +26,7 @@ data/
 .playwright-mcp/
 
 # Internal planning doc — competition strategy/notes, not for the public repo.
-# (Delete this line if you want to include it.)
+# (Delete the line below if you ever want to include it.)
 PROJECT_BRIEF.md
 
 # OS / editor

@@ -1,4 +1,6 @@
 """Nyas S3-compatible storage via boto3: upload clips + make presigned URLs."""
+from functools import lru_cache
+
 import boto3
 from botocore.config import Config
 from app.config import (
@@ -36,6 +38,19 @@ def list_keys() -> set[str]:
             break
         token = resp["NextContinuationToken"]
     return keys
+
+
+def delete_object(key: str):
+    """Delete one object (best-effort; ignores 'already gone')."""
+    _s3.delete_object(Bucket=S3_BUCKET, Key=key)
+
+
+@lru_cache(maxsize=4)
+def get_bytes(key: str) -> bytes:
+    """Fetch a whole object's bytes (cached). Nyas storage doesn't honor HTTP
+    Range requests, so the browser can't seek a presigned URL — we serve the
+    audio ourselves with Range support and slice from these bytes."""
+    return _s3.get_object(Bucket=S3_BUCKET, Key=key)["Body"].read()
 
 
 def presigned_url(key: str, expires: int = 3600) -> str:

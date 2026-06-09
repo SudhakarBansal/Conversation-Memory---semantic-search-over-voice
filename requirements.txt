@@ -6,10 +6,11 @@
 #   pip install -r requirements.txt
 
 sentence-transformers   # local embedding model (all-MiniLM-L6-v2)
+faster-whisper          # speech-to-text with timestamps (CPU/int8)
 psycopg[binary]         # Nyas Postgres client
 boto3                   # Nyas S3-compatible storage
-soundfile               # FLAC inspection
 python-dotenv           # load .env
 fastapi                 # API
 uvicorn[standard]       # ASGI server
 numpy                   # cosine similarity
+python-multipart        # multipart parsing for file uploads
