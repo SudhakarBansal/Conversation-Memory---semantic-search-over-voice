@@ -21,8 +21,9 @@ import uuid
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
-from app import db, storage
+from app import db, fetch_url, storage
 from app.embed import embed
 from app.search import load_segments, rank
 from app.transcribe import transcribe, probe_duration_ms, MAX_DURATION_MS
@@ -67,6 +68,24 @@ def _process(source_id: int, local_path: str):
             os.remove(local_path)
 
 
+def _process_url(source_id: int, url: str, key: str):
+    """Download audio from a URL, store it, then index it (same pipeline as upload)."""
+    try:
+        local_path = fetch_url.download_audio(url)
+    except Exception as e:  # noqa: BLE001
+        db.set_status(source_id, "error", f"download failed: {str(e)[:300]}")
+        print(f"✗ source {source_id} download failed: {e}")
+        return
+    try:
+        storage.upload_file(local_path, key, content_type="audio/mpeg")
+    except Exception as e:  # noqa: BLE001
+        db.set_status(source_id, "error", f"upload failed: {str(e)[:300]}")
+        if os.path.exists(local_path):
+            os.remove(local_path)
+        return
+    _process(source_id, local_path)  # transcribe + embed + store + mark ready; removes temp
+
+
 # ---------- endpoints ----------
 
 @app.get("/api/health")
@@ -104,6 +123,37 @@ async def create_source(file: UploadFile = File(...), name: str = Form(...)):
 
     threading.Thread(target=_process, args=(source_id, tmp), daemon=True).start()
     return {"source_id": source_id, "status": "processing", "duration_ms": duration_ms}
+
+
+class UrlSource(BaseModel):
+    url: str
+    name: str | None = None
+
+
+@app.post("/api/sources/url")
+def create_source_from_url(body: UrlSource):
+    """Ingest audio from a YouTube / media URL (yt-dlp). Probes duration for the
+    cap check first, then downloads + transcribes in a background thread."""
+    url = body.url.strip()
+    if not url:
+        raise HTTPException(400, "url is required")
+
+    # cheap metadata probe — enforce the cap before any heavy download
+    try:
+        duration_ms, title = fetch_url.probe_url(url)
+    except Exception:
+        raise HTTPException(400, "couldn't read audio from that link")
+    if duration_ms > MAX_DURATION_MS:
+        raise HTTPException(
+            400, f"audio is {duration_ms/60000:.1f} min; limit is {MAX_DURATION_MS/60000:.0f} min"
+        )
+
+    key = f"uploads/{uuid.uuid4().hex}.mp3"
+    name = (body.name or "").strip() or title
+    source_id = db.create_source(name, key, "audio/mpeg", duration_ms)
+
+    threading.Thread(target=_process_url, args=(source_id, url, key), daemon=True).start()
+    return {"source_id": source_id, "status": "processing", "duration_ms": duration_ms, "title": title}
 
 
 @app.get("/api/sources")

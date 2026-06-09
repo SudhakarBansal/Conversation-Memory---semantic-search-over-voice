@@ -14,3 +14,4 @@ fastapi                 # API
 uvicorn[standard]       # ASGI server
 numpy                   # cosine similarity
 python-multipart        # multipart parsing for file uploads
+yt-dlp                   # pull audio from YouTube / media URLs

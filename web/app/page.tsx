@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  uploadSource, listSources, search, deleteSource,
+  uploadSource, fetchUrlSource, listSources, search, deleteSource,
   type Source, type SegHit,
 } from "./lib/api";
 
@@ -15,7 +15,9 @@ export default function Home() {
   const [sources, setSources] = useState<Source[]>([]);
   const [activeId, setActiveId] = useState<number | null>(null);
 
+  const [mode, setMode] = useState<"file" | "url">("file");
   const [file, setFile] = useState<File | null>(null);
+  const [url, setUrl] = useState("");
   const [name, setName] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -55,6 +57,7 @@ export default function Home() {
   async function onUpload(e: React.FormEvent) {
     e.preventDefault();
     if (!file) return;
+    stopAudio();
     setUploading(true);
     setUploadError(null);
     try {
@@ -69,6 +72,28 @@ export default function Home() {
       await refresh();
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : "upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function onFetchUrl(e: React.FormEvent) {
+    e.preventDefault();
+    if (!url.trim()) return;
+    stopAudio();
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const res = await fetchUrlSource(url.trim(), name.trim());
+      setActiveId(res.source_id);
+      setResults([]);
+      setSearched(false);
+      setQuery("");
+      setUrl("");
+      setName("");
+      await refresh();
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "couldn't fetch that link");
     } finally {
       setUploading(false);
     }
@@ -169,15 +194,34 @@ export default function Home() {
             Conversation Memory
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-balance text-sm text-slate-400 sm:text-base">
-            Upload any audio — a podcast, a lecture, an interview — and find the
-            exact moment by <span className="text-slate-200">meaning</span>, not
+            Upload any audio — or paste a YouTube link — and find the exact
+            moment by <span className="text-slate-200">meaning</span>, not
             keywords. Transcribed with Whisper, searched by semantic similarity,
             stored on <span className="text-slate-200">Nyas</span>.
           </p>
         </header>
 
-        {/* Upload */}
-        <form onSubmit={onUpload} className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+        {/* Add a source — upload a file or paste a link */}
+        <form
+          onSubmit={mode === "file" ? onUpload : onFetchUrl}
+          className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4"
+        >
+          {/* mode toggle */}
+          <div className="mb-3 inline-flex rounded-xl border border-slate-700 bg-slate-950/70 p-1 text-sm">
+            {(["file", "url"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => { setMode(m); setUploadError(null); }}
+                className={`rounded-lg px-3 py-1.5 transition ${
+                  mode === m ? "bg-violet-600 text-white" : "text-slate-400 hover:text-white"
+                }`}
+              >
+                {m === "file" ? "📁 Upload file" : "🔗 Paste link"}
+              </button>
+            ))}
+          </div>
+
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <input
               type="text"
@@ -186,34 +230,59 @@ export default function Home() {
               placeholder="Name this source (optional)"
               className="flex-1 rounded-xl border border-slate-700 bg-slate-950/70 px-4 py-2.5 text-sm outline-none placeholder:text-slate-500 focus:border-violet-500"
             />
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="audio/*"
-              className="hidden"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/70 px-4 py-2.5 text-sm text-slate-300 transition hover:border-slate-600 hover:text-white"
-            >
-              📁 {file ? "Change file" : "Choose audio"}
-            </button>
-            <span className="max-w-[14rem] truncate text-xs text-slate-400" title={file?.name}>
-              {file ? file.name : "no file chosen"}
-            </span>
-            <button
-              type="submit"
-              disabled={!file || uploading}
-              className="rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-violet-500 disabled:opacity-40"
-            >
-              {uploading ? "Uploading…" : "Upload & Transcribe"}
-            </button>
+
+            {mode === "file" ? (
+              <>
+                <input
+                  key="file-input"
+                  ref={fileInputRef}
+                  type="file"
+                  accept="audio/*"
+                  className="hidden"
+                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/70 px-4 py-2.5 text-sm text-slate-300 transition hover:border-slate-600 hover:text-white"
+                >
+                  📁 {file ? "Change file" : "Choose audio"}
+                </button>
+                <span className="max-w-[14rem] truncate text-xs text-slate-400" title={file?.name}>
+                  {file ? file.name : "no file chosen"}
+                </span>
+                <button
+                  type="submit"
+                  disabled={!file || uploading}
+                  className="rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-violet-500 disabled:opacity-40"
+                >
+                  {uploading ? "Uploading…" : "Upload & Transcribe"}
+                </button>
+              </>
+            ) : (
+              <>
+                <input
+                  key="url-input"
+                  type="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="Paste a YouTube or media URL…"
+                  className="flex-[2] rounded-xl border border-slate-700 bg-slate-950/70 px-4 py-2.5 text-sm outline-none placeholder:text-slate-500 focus:border-violet-500"
+                />
+                <button
+                  type="submit"
+                  disabled={!url.trim() || uploading}
+                  className="rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-violet-500 disabled:opacity-40"
+                >
+                  {uploading ? "Fetching…" : "Fetch & Transcribe"}
+                </button>
+              </>
+            )}
           </div>
           <p className="mt-2 text-xs text-slate-500">
-            Up to 15 minutes. Transcription runs at ~2× realtime, so a 10-min clip
-            takes a few minutes.
+            {mode === "file"
+              ? "Up to 15 minutes. Transcription runs at ~2× realtime, so a 10-min clip takes a few minutes."
+              : "Paste a YouTube (or other media) link — we pull the audio. Up to 15 minutes; fetch + transcribe takes a few minutes."}
           </p>
           {uploadError && <p className="mt-2 text-xs text-red-400">{uploadError}</p>}
         </form>
@@ -231,7 +300,7 @@ export default function Home() {
                     : "border-slate-700 text-slate-300 hover:border-slate-600"
                 }`}
               >
-                <button onClick={() => { setActiveId(s.id); setResults([]); setSearched(false); }}>
+                <button onClick={() => { stopAudio(); setActiveId(s.id); setResults([]); setSearched(false); }}>
                   {s.name}
                   {s.status === "processing" && " ⏳"}
                   {s.status === "error" && " ⚠️"}
@@ -339,7 +408,7 @@ export default function Home() {
         {/* Empty hint */}
         {sources.length === 0 && (
           <p className="mt-10 text-center text-sm text-slate-500">
-            Upload an audio file above to get started.
+            Upload an audio file — or paste a link — above to get started.
           </p>
         )}
 

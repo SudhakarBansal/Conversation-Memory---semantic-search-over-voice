@@ -1,6 +1,6 @@
 # Conversation Memory
 
-**Upload any audio — a podcast, lecture, or interview — and jump to the exact moment by *meaning*, not keywords.**
+**Upload any audio — or paste a YouTube link — and jump to the exact moment by *meaning*, not keywords.**
 
 Search "the part where they talk about self-doubt" and it finds that passage even if nobody said those words — then plays the audio from that exact second.
 
@@ -10,7 +10,7 @@ No LLM in the loop. Just speech-to-text, embeddings, and cosine similarity — a
 
 ## What it does
 
-1. **Upload** an audio file.
+1. **Add a source** — upload an audio file, or paste a YouTube / media URL (the backend pulls the audio with `yt-dlp`).
 2. **Whisper** transcribes it into timestamped segments, which are merged into ~25-second chunks (each holding a complete thought).
 3. Each chunk is turned into an **embedding** (a vector that captures meaning).
 4. **Search** in plain language — the query is embedded too, and chunks are ranked by **cosine similarity**.
@@ -42,7 +42,7 @@ This uses all three Nyas primitives:
 
 ## Tech stack
 
-- **Backend:** FastAPI · [faster-whisper](https://github.com/SYSTRAN/faster-whisper) (`medium`, CPU) · [sentence-transformers](https://www.sbert.net/) (`all-MiniLM-L6-v2`, 384-dim) · NumPy
+- **Backend:** FastAPI · [faster-whisper](https://github.com/SYSTRAN/faster-whisper) (`medium`, CPU) · [sentence-transformers](https://www.sbert.net/) (`all-MiniLM-L6-v2`, 384-dim) · NumPy · [yt-dlp](https://github.com/yt-dlp/yt-dlp) (URL ingestion)
 - **Frontend:** Next.js + React + Tailwind CSS
 - **Infra:** Nyas (Postgres + S3)
 

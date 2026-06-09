@@ -49,6 +49,19 @@ export async function uploadSource(
   return jsonOrThrow(await fetch(`${API}/api/sources`, { method: "POST", body: fd }));
 }
 
+export async function fetchUrlSource(
+  url: string,
+  name: string,
+): Promise<{ source_id: number; status: string; duration_ms: number; title: string }> {
+  return jsonOrThrow(
+    await fetch(`${API}/api/sources/url`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url, name: name || null }),
+    }),
+  );
+}
+
 export async function getSource(id: number): Promise<Source> {
   return jsonOrThrow(await fetch(`${API}/api/sources/${id}`));
 }
