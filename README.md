@@ -101,7 +101,7 @@ Open **http://localhost:3000**, upload an audio file, wait for it to transcribe,
 
 ## How search works under the hood
 
-![Cosine similarity — meaning is direction](cosine_similarity.png)
+![Cosine similarity — meaning is direction](cosine-similarity.svg)
 
 Every sentence becomes a vector. Sentences with similar meaning point in similar **directions**, so the angle between them is small and their **cosine similarity** is close to 1; unrelated sentences sit at a wide angle, near 0.
 
